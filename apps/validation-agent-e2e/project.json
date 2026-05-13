@@ -1,0 +1,17 @@
+{
+  "name": "validation-agent-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "implicitDependencies": ["validation-agent"],
+  "targets": {
+    "e2e": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{e2eProjectRoot}"],
+      "options": {
+        "jestConfig": "apps/validation-agent-e2e/jest.config.cts",
+        "passWithNoTests": true
+      },
+      "dependsOn": ["validation-agent:build", "validation-agent:serve"]
+    }
+  }
+}

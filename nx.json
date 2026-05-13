@@ -38,7 +38,7 @@
       "options": {
         "targetName": "test"
       },
-      "exclude": ["apps/generator-agent-e2e/**/*"]
+      "exclude": ["apps/generator-agent-e2e/**/*", "apps/validation-agent-e2e/**/*"]
     }
   ]
 }

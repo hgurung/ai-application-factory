@@ -1,0 +1,99 @@
+services:
+
+  # ── NGINX — reverse proxy, routes traffic to active slot ──────────
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"       # all user traffic enters here
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - generator-agent-blue
+      - validation-agent-blue
+
+  # ── BLUE SLOT — current live version ─────────────────────────────
+  generator-agent-blue:
+    build:
+      context: .
+      dockerfile: apps/generator-agent/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=agent
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=agentdb
+      - TYPEORM_SYNC=true
+      - VALIDATION_AGENT_URL=http://validation-agent-blue:3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - postgres
+      - redis
+
+  validation-agent-blue:
+    build:
+      context: .
+      dockerfile: apps/validation-agent/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    depends_on:
+      - postgres
+      - redis
+
+  # ── GREEN SLOT — new version (standby until switched) ────────────
+  generator-agent-green:
+    build:
+      context: .
+      dockerfile: apps/generator-agent/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=agent
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=agentdb
+      - VALIDATION_AGENT_URL=http://validation-agent-green:3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - postgres
+      - redis
+    profiles:
+      - green   # only starts when explicitly activated
+
+  validation-agent-green:
+    build:
+      context: .
+      dockerfile: apps/validation-agent/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    depends_on:
+      - postgres
+      - redis
+    profiles:
+      - green   # only starts when explicitly activated
+
+  # ── INFRASTRUCTURE — shared by both slots ─────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: agent
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: agentdb
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
