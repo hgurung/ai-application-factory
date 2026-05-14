@@ -4,12 +4,13 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      - "80:80"       # all user traffic enters here
+      - "80:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
     depends_on:
       - generator-agent-blue
       - validation-agent-blue
+      - planner-agent-blue
 
   # ── BLUE SLOT — current live version ─────────────────────────────
   generator-agent-blue:
@@ -43,6 +44,24 @@ services:
       - postgres
       - redis
 
+  planner-agent-blue:
+    build:
+      context: .
+      dockerfile: apps/planner-agent/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=agent
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=agentdb
+      - TYPEORM_SYNC=true
+      - GENERATOR_AGENT_URL=http://generator-agent-blue:3000
+    depends_on:
+      - postgres
+      - generator-agent-blue
+
   # ── GREEN SLOT — new version (standby until switched) ────────────
   generator-agent-green:
     build:
@@ -63,7 +82,7 @@ services:
       - postgres
       - redis
     profiles:
-      - green   # only starts when explicitly activated
+      - green
 
   validation-agent-green:
     build:
@@ -76,7 +95,27 @@ services:
       - postgres
       - redis
     profiles:
-      - green   # only starts when explicitly activated
+      - green
+
+  planner-agent-green:
+    build:
+      context: .
+      dockerfile: apps/planner-agent/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=agent
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=agentdb
+      - TYPEORM_SYNC=true
+      - GENERATOR_AGENT_URL=http://generator-agent-green:3000
+    depends_on:
+      - postgres
+      - generator-agent-green
+    profiles:
+      - green
 
   # ── INFRASTRUCTURE — shared by both slots ─────────────────────────
   postgres:
