@@ -15,6 +15,7 @@ export interface GenerationJobData {
 export class JobProcessor extends WorkerHost {
   private readonly logger = new Logger(JobProcessor.name);
   private readonly validationUrl = process.env['VALIDATION_AGENT_URL'] || 'http://localhost:3001';
+  private readonly fileWriterUrl = process.env['FILE_WRITER_URL'] || 'http://localhost:3003';
 
   constructor(
     private readonly jobService: JobService,
@@ -41,6 +42,20 @@ export class JobProcessor extends WorkerHost {
 
       const report = await response.json();
       this.logger.log(`Validation result — passed: ${report.overallPassed}, score: ${report.overallScore}`);
+
+      // If validation passed, send code to file-writer-agent to write real .ts files
+      if (report.overallPassed) {
+        const job = await this.jobService.findOne(jobId);
+        await fetch(`${this.fileWriterUrl}/api/write`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productId: job.clientName,
+            moduleName: job.requirement,
+            code: generatedCode,
+          }),
+        }).catch((e) => this.logger.warn(`File writer unavailable: ${e.message}`));
+      }
 
       const finalStatus = report.overallPassed ? 'done' : 'failed';
       const errorMessage = report.overallPassed

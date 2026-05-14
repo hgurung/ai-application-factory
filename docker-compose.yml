@@ -2,15 +2,16 @@ services:
 
   # ── NGINX — reverse proxy, routes traffic to active slot ──────────
   nginx:
-    image: nginx:alpine
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
     ports:
       - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
     depends_on:
       - generator-agent-blue
       - validation-agent-blue
       - planner-agent-blue
+      - file-writer-agent
 
   # ── BLUE SLOT — current live version ─────────────────────────────
   generator-agent-blue:
@@ -27,11 +28,13 @@ services:
       - POSTGRES_DB=agentdb
       - TYPEORM_SYNC=true
       - VALIDATION_AGENT_URL=http://validation-agent-blue:3000
+      - FILE_WRITER_URL=http://file-writer-agent:3000
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     depends_on:
       - postgres
       - redis
+      - file-writer-agent
 
   validation-agent-blue:
     build:
@@ -76,11 +79,13 @@ services:
       - POSTGRES_PASSWORD=password
       - POSTGRES_DB=agentdb
       - VALIDATION_AGENT_URL=http://validation-agent-green:3000
+      - FILE_WRITER_URL=http://file-writer-agent:3000
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     depends_on:
       - postgres
       - redis
+      - file-writer-agent
     profiles:
       - green
 
@@ -117,6 +122,18 @@ services:
     profiles:
       - green
 
+  # ── FILE WRITER — shared service, not blue-green (stateless + volume) ──
+  file-writer-agent:
+    build:
+      context: .
+      dockerfile: apps/file-writer-agent/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - OUTPUT_DIR=/app/output
+    volumes:
+      - generated_output:/app/output
+
   # ── INFRASTRUCTURE — shared by both slots ─────────────────────────
   postgres:
     image: postgres:15-alpine
@@ -136,3 +153,4 @@ services:
 
 volumes:
   postgres_data:
+  generated_output:
