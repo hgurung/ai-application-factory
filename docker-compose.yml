@@ -31,6 +31,11 @@ services:
       - FILE_WRITER_URL=http://file-writer-agent:3000
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - USE_GROQ=${USE_GROQ:-false}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
+      - USE_CLAUDE=${USE_CLAUDE:-false}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
     depends_on:
       - postgres
       - redis
@@ -82,6 +87,11 @@ services:
       - FILE_WRITER_URL=http://file-writer-agent:3000
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - USE_GROQ=${USE_GROQ:-false}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
+      - USE_CLAUDE=${USE_CLAUDE:-false}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
     depends_on:
       - postgres
       - redis

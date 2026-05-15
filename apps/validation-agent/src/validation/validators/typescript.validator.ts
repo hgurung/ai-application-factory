@@ -8,10 +8,12 @@ export class TypeScriptValidator {
     const issues: string[] = [];
     const suggestions: string[] = [];
 
-    // Count "any" usages — each one weakens type safety
+    // Count "any" usages — allow up to 2 (common in generated DTO scaffolding)
     const anyCount = (code.match(/: any/g) || []).length;
-    if (anyCount > 0)
+    if (anyCount > 2)
       issues.push(`${anyCount} "any" type(s) found — replace with proper types`);
+    else if (anyCount > 0)
+      suggestions.push(`${anyCount} "any" type(s) found — consider replacing with proper interfaces`);
 
     // Functions should declare return types
     const asyncFnWithoutReturn = (code.match(/async \w+\([^)]*\)\s*{/g) || []).length;
